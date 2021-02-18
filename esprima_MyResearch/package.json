@@ -1,0 +1,16 @@
+{
+  "name": "esprima_callgraph",
+  "version": "1.0.0",
+  "description": "",
+  "main": "demo1.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "babel-core": "^6.26.3",
+    "esprima": "^4.0.1",
+    "esprima-ast-utils": "^0.0.7"
+  }
+}

@@ -1,0 +1,11 @@
+
+digraph test{
+overlap=scalexy;
+"[./mocks/file.js]" -> "[./mocks/file.js]aFnInThisFile"
+"[./anotherFile]" -> "[./anotherFile]fn2InAnotherFile"
+"[./mocks/file.js]" -> "[null]log"
+"[./mocks/file.js]" -> "[./anotherFile]aFnInAnotherFile"
+"[./anotherFile]" -> "[null]log"
+"[./anotherFile]" -> "[null]log"
+"[./anotherFile]" -> "[null]log"
+}
