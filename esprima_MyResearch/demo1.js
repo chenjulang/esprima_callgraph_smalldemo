@@ -23,12 +23,14 @@ let membercalls=[]//系统函数+外部函数的调用，如{object:'console',pr
 //1.作用域问题如何解决？
 
 analyzeModule('./mocks/file.js','./mocks/file.js',true)
-
-
+// jquery-2.1.0-analysis copy.js
+// analyzeModule('./mocks/jquery-2.1.0-analysis copy.js','./mocks/jquery-2.1.0-analysis copy.js',true)
 
 
 function collectImportVariables(node,parent,property,index,depth,currentanalyzePath){
     if(node.type == Types.VariableDeclarator){//这种方法找定义肯定有问题的，同名的变量会隐藏问题
+        if(node.init ===null)return;
+
         if(node.id.type==Types.Identifier &&
             node.init.type == Types.CallExpression &&
             node.init.callee.name == "require")
@@ -95,7 +97,8 @@ function analyzeModule(initpath,currentanalyzePath,init=false){
 
         esprima_Utils.traverse(tree,(node,parent,property,index,depth)=>{
             analyzeFunctions(node,parent,property,index,depth,currentanalyzePath)
-        
+            
+            if(node.init ===null)return;
             if(node.type == Types.VariableDeclarator){
                 if(node.id.type==Types.Identifier &&
                     node.init.type == Types.CallExpression &&
@@ -134,8 +137,6 @@ function analyzeModule(initpath,currentanalyzePath,init=false){
         return tuples;
     }
     function createDotAndPng(){
-        let aaa=[requires,calls,membercalls]
-
         let tuples= makeTuples();
 
         const stream = fs.openSync('callgraph.dot', 'w');
