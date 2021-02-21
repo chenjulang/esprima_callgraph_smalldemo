@@ -11,6 +11,7 @@
   "dependencies": {
     "babel-core": "^6.26.3",
     "esprima": "^4.0.1",
-    "esprima-ast-utils": "^0.0.7"
+    "esprima-ast-utils": "^0.0.7",
+    "esrefactor": "^0.1.0"
   }
 }

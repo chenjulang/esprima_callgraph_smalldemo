@@ -1,11 +1,20 @@
+// @ts-ignore
 const { types } = require('babel-core');
+// @ts-ignore
 const { log } = require('console');
 const path= require('path')
 const fs = require('fs')
+// @ts-ignore
 const esprima = require('esprima');
+// @ts-ignore
 const esprima_Utils = require('esprima-ast-utils')
 const execSync = require('child_process').execSync;
+const esrefactor = require('esrefactor')
 
+// var ctx = new esrefactor.Context('var x = 42; y = x * 2; z = x / 2');
+// var id = ctx.identify(17);
+// var code = ctx.rename(id, 'answer');
+// var code2 = ctx.rename(id, 'answer2');
 
 let util = require('./mocks/util');
 
@@ -17,17 +26,21 @@ const Types={
 }
 
 //目标结果
-let requires = []//外部导入的定义,如{fromfilepath,varname,targetfilepath}
+let requires = []//外部导入的定义,如{fromfilepath,varname,targetfilepath,start}
+//要通过esrefactor记录一下位置信息
 let calls = []//本地模块调用,如{fromfilepath,name,targetfilepath}
 let membercalls=[]//系统函数+外部函数的调用，如{object:'console',property:'log'}
+
 //1.作用域问题如何解决？
+//要分析各层次的块都定义了什么东西，然后用就近原则？
 
 analyzeModule('./mocks/file.js','./mocks/file.js',true)
 // jquery-2.1.0-analysis copy.js
 // analyzeModule('./mocks/jquery-2.1.0-analysis copy.js','./mocks/jquery-2.1.0-analysis copy.js',true)
 
 
-function collectImportVariables(node,parent,property,index,depth,currentanalyzePath){
+// @ts-ignore
+function collectImportVariables(node,parent,property,index,depth,currentanalyzePath,ctx){
     if(node.type == Types.VariableDeclarator){//这种方法找定义肯定有问题的，同名的变量会隐藏问题
         if(node.init ===null)return;
 
@@ -38,20 +51,33 @@ function collectImportVariables(node,parent,property,index,depth,currentanalyzeP
                 let requirevarname = node.id.name,
                 fromfilepath=currentanalyzePath,
                 targetfilepath=node.init.arguments[0].value;
+                let start = node.id.range[0];
 
-                requires.push({fromfilepath,targetfilepath,requirevarname})
+                requires.push({fromfilepath,targetfilepath,requirevarname,start})
             }
     }
 }
 
-function analyzeFunctions(node,parent,property,index,depth,currentanalyzePath){
+// @ts-ignore
+function analyzeFunctions(node,parent,property,index,depth,currentanalyzePath,ctx){
     if(node.type == Types.CallExpression){
         if(node['callee']['type']==Types.MemberExpression){//系统函数+外部文件函数
             let variablename = node['callee']['object']['name']
             let externalfunctionName = node['callee']['property']['name'];
             let fromfilepath = currentanalyzePath,
             targetfilepath = null;
-            requires.forEach((ele)=>{ if(ele.requirevarname==variablename){targetfilepath=ele.targetfilepath} })
+            let start = node['callee']['object']['range'][0],
+            ctxId = ctx.identify(start);
+            let declarationStart = ctxId.declaration? ctxId.declaration.range[0] : null; 
+            requires.forEach((ele)=>{ 
+                if(ele.requirevarname == variablename 
+                    && ele.start == declarationStart)
+                {
+                    targetfilepath=ele.targetfilepath
+                } 
+            })
+            5
+            if(targetfilepath===null){targetfilepath = variablename}
             membercalls.push(
                 {fromfilepath,targetfilepath,externalfunctionName}
             )
@@ -64,6 +90,8 @@ function analyzeFunctions(node,parent,property,index,depth,currentanalyzePath){
             targetfilepath = currentanalyzePath;
             calls.push({fromfilepath,targetfilepath,localfunctionName})
         }
+
+        
 
     }
 }
@@ -85,18 +113,28 @@ function analyzeModule(initpath,currentanalyzePath,init=false){
         localpath = initpath = currentanalyzePath;
     }
 
+    let ctx;
+    // var id = ctx.identify(17);
 
     util.readFile(localpath)
     .then((es6)=>{
+
+        ctx = new esrefactor.Context(es6);
+
+        // @ts-ignore
         let tree = esprima_Utils.parse(es6)
+        // aFnInThisFile
+
         if(init)util.writeFile('./mocks/result.json',JSON.stringify(tree));
 
+        // @ts-ignore
         esprima_Utils.traverse(tree,(node,parent,property,index,depth)=>{
-            collectImportVariables(node,parent,property,index,depth,currentanalyzePath)
+            collectImportVariables(node,parent,property,index,depth,currentanalyzePath,ctx)
         },true)
 
+        // @ts-ignore
         esprima_Utils.traverse(tree,(node,parent,property,index,depth)=>{
-            analyzeFunctions(node,parent,property,index,depth,currentanalyzePath)
+            analyzeFunctions(node,parent,property,index,depth,currentanalyzePath,ctx)
             
             if(node.init ===null)return;
             if(node.type == Types.VariableDeclarator){
@@ -125,6 +163,7 @@ function analyzeModule(initpath,currentanalyzePath,init=false){
 }
 
     // `[${currentFile}]${fn}`
+    // @ts-ignore
     const mapTupleToString = t => `"${t[0]}" -> "${t[1]}"`;
     function makeTuples(){
         let tuples=[];

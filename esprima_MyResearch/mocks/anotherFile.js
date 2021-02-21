@@ -8,6 +8,7 @@ function fn2InAnotherFile(){
 fn2InAnotherFile()
 console.log(123)
 
-module.exports = {
-  aFnInAnotherFile
-}
+// let mE={
+//   aFnInAnotherFile};
+
+module.exports = {aFnInAnotherFile:aFnInAnotherFile};
